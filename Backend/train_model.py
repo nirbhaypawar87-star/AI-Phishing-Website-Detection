@@ -8,7 +8,7 @@ import joblib
 df = pd.read_csv("../dataset/dataset.csv")
 
 # Features (all columns except Result)
-X = df.drop("Result", axis=1)
+X = df.drop(["index", "Result"], axis=1)
 
 # Target column
 y = df["Result"]
