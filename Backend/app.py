@@ -1,3 +1,4 @@
+from url_predict import router as url_router
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
@@ -7,6 +8,7 @@ import pandas as pd
 from feature_extractor import extract_features
 
 app = FastAPI(title="AI Phishing Website Detection API")
+app.include_router(url_router)
 
 # Load trained model
 model = joblib.load("../models/phishing_model.pkl")
