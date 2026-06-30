@@ -1,4 +1,3 @@
-from url_predict import router as url_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -7,26 +6,32 @@ import joblib
 import pandas as pd
 
 from feature_extractor import extract_features
+from url_predict import router as url_router
 
 app = FastAPI(title="AI Phishing Website Detection API")
 
+# -------------------------------
+# Enable CORS
+# -------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Allow all origins (good for development)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include Router
 app.include_router(url_router)
 
-# Load trained model
+# -------------------------------
+# Load AI Model
+# -------------------------------
 model = joblib.load("../models/phishing_model.pkl")
 
-
-# ===========================
+# -------------------------------
 # Request Models
-# ===========================
-
+# -------------------------------
 class WebsiteFeatures(BaseModel):
     features: List[int]
 
@@ -35,10 +40,9 @@ class URLInput(BaseModel):
     url: str
 
 
-# ===========================
-# Home Endpoint
-# ===========================
-
+# -------------------------------
+# Home API
+# -------------------------------
 @app.get("/")
 def home():
     return {
@@ -46,10 +50,9 @@ def home():
     }
 
 
-# ===========================
-# Prediction using 30 Features
-# ===========================
-
+# -------------------------------
+# Predict using 30 Features
+# -------------------------------
 @app.post("/predict")
 def predict(data: WebsiteFeatures):
 
@@ -94,29 +97,83 @@ def predict(data: WebsiteFeatures):
     df = pd.DataFrame([data.features], columns=feature_names)
 
     prediction = model.predict(df)
+    probability = model.predict_proba(df)
+
+    confidence = max(probability[0]) * 100
 
     if prediction[0] == 1:
-        result = "Legitimate Website"
+        result = "🟢 Legitimate Website"
     else:
-        result = "Phishing Website"
+        result = "🔴 Phishing Website"
 
     return {
-        "prediction": result
+        "prediction": result,
+        "confidence": f"{confidence:.2f}%",
+        "model": "Random Forest"
     }
 
 
-# ===========================
-# Prediction using URL
-# ===========================
-
+# -------------------------------
+# Predict using URL
+# -------------------------------
 @app.post("/predict_url")
 def predict_url(data: URLInput):
 
     features = extract_features(data.url)
 
+    feature_names = [
+        'having_IPhaving_IP_Address',
+        'URLURL_Length',
+        'Shortining_Service',
+        'having_At_Symbol',
+        'double_slash_redirecting',
+        'Prefix_Suffix',
+        'having_Sub_Domain',
+        'SSLfinal_State',
+        'Domain_registeration_length',
+        'Favicon',
+        'port',
+        'HTTPS_token',
+        'Request_URL',
+        'URL_of_Anchor',
+        'Links_in_tags',
+        'SFH',
+        'Submitting_to_email',
+        'Abnormal_URL',
+        'Redirect',
+        'on_mouseover',
+        'RightClick',
+        'popUpWidnow',
+        'Iframe',
+        'age_of_domain',
+        'DNSRecord',
+        'web_traffic',
+        'Page_Rank',
+        'Google_Index',
+        'Links_pointing_to_page',
+        'Statistical_report'
+    ]
+
+    if len(features) != len(feature_names):
+        return {
+            "error": f"Feature extractor returned {len(features)} features instead of {len(feature_names)}"
+        }
+
+    df = pd.DataFrame([features], columns=feature_names)
+
+    prediction = model.predict(df)
+    probability = model.predict_proba(df)
+
+    confidence = max(probability[0]) * 100
+
+    if prediction[0] == 1:
+        result = "🟢 Legitimate Website"
+    else:
+        result = "🔴 Phishing Website"
+
     return {
         "url": data.url,
-        "features": features,
-        "total_features": len(features),
-        "message": "Feature extraction successful"
+        "prediction": result,
+        "confidence": f"{confidence:.2f}%",
+        "model": "Random Forest"
     }

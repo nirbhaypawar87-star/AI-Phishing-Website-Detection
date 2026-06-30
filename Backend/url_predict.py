@@ -9,6 +9,7 @@ router = APIRouter()
 # Load trained model
 model = joblib.load("../models/phishing_model.pkl")
 
+
 class URLInput(BaseModel):
     url: str
 
@@ -18,7 +19,6 @@ def predict_url(data: URLInput):
 
     features = extract_features(data.url)
 
-    # Feature names used while training
     feature_names = [
         'having_IPhaving_IP_Address',
         'URLURL_Length',
@@ -56,16 +56,27 @@ def predict_url(data: URLInput):
     while len(features) < 30:
         features.append(0)
 
+    # Safety check
+    if len(features) != 30:
+        return {
+            "error": f"Expected 30 features but got {len(features)}"
+        }
+
     df = pd.DataFrame([features], columns=feature_names)
 
     prediction = model.predict(df)
+    probability = model.predict_proba(df)
+
+    confidence = max(probability[0]) * 100
 
     if prediction[0] == 1:
-        result = "Legitimate Website"
+        result = "🟢 Legitimate Website"
     else:
-        result = "Phishing Website"
+        result = "🔴 Phishing Website"
 
     return {
         "url": data.url,
-        "prediction": result
+        "prediction": result,
+        "confidence": f"{confidence:.2f}%",
+        "model": "Random Forest"
     }
