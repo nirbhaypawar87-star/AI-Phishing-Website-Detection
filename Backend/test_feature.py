@@ -1,5 +1,8 @@
 from feature_extractor import extract_features
 
-url = "https://google.com"
+url = "http://bit.ly/login-account"
 
-print(extract_features(url))
+features = extract_features(url)
+
+print("Features:", features)
+print("Total:", len(features))
