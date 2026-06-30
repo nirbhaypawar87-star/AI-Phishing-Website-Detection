@@ -1,5 +1,6 @@
 from url_predict import router as url_router
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import joblib
@@ -8,6 +9,14 @@ import pandas as pd
 from feature_extractor import extract_features
 
 app = FastAPI(title="AI Phishing Website Detection API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # Allow all origins (good for development)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(url_router)
 
 # Load trained model
