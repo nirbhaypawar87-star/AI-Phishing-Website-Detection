@@ -1,22 +1,43 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import List
 import joblib
 import pandas as pd
 
-app = FastAPI()
+from feature_extractor import extract_features
+
+app = FastAPI(title="AI Phishing Website Detection API")
 
 # Load trained model
 model = joblib.load("../models/phishing_model.pkl")
 
-# Input model
-from typing import List
+
+# ===========================
+# Request Models
+# ===========================
 
 class WebsiteFeatures(BaseModel):
     features: List[int]
 
+
+class URLInput(BaseModel):
+    url: str
+
+
+# ===========================
+# Home Endpoint
+# ===========================
+
 @app.get("/")
 def home():
-    return {"message": "AI Phishing Detection API"}
+    return {
+        "message": "AI Phishing Website Detection API is Running!"
+    }
+
+
+# ===========================
+# Prediction using 30 Features
+# ===========================
 
 @app.post("/predict")
 def predict(data: WebsiteFeatures):
@@ -54,8 +75,10 @@ def predict(data: WebsiteFeatures):
         'Statistical_report'
     ]
 
-    print(data.features)
-    print(len(data.features))
+    if len(data.features) != len(feature_names):
+        return {
+            "error": f"Expected {len(feature_names)} features but got {len(data.features)}"
+        }
 
     df = pd.DataFrame([data.features], columns=feature_names)
 
@@ -68,4 +91,21 @@ def predict(data: WebsiteFeatures):
 
     return {
         "prediction": result
+    }
+
+
+# ===========================
+# Prediction using URL
+# ===========================
+
+@app.post("/predict_url")
+def predict_url(data: URLInput):
+
+    features = extract_features(data.url)
+
+    return {
+        "url": data.url,
+        "features": features,
+        "total_features": len(features),
+        "message": "Feature extraction successful"
     }
